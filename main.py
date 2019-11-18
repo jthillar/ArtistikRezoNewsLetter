@@ -4,14 +4,14 @@ import re
 import datetime, requests, os, time, random
 from bs4 import BeautifulSoup
 from selenium import webdriver
-
 from pymongo import MongoClient
 
-
-client = MongoClient("mongodb://julien:bctB1iR4@data-collection-l1mqp.mongodb.net/test?retryWrites=true&w=majority")
+client = MongoClient("mongodb+srv://julien:bctB1iR4@data-collection-l1mqp.mongodb.net/test?retryWrites=true&w=majority")
 db = client.get_database('artistik_rezo')
+newRecords = db.days_records
+oldRecords = db.old_records
 
-records = db.days_records
+oldRecordsEvent = list(oldRecords.find({}))
 
 url = 'http://www.clubartistikrezo.com/'
 chromeExecutable = os.path.join(os.path.dirname(__file__))
@@ -19,7 +19,7 @@ chromeExecutable = os.path.join(os.path.dirname(__file__))
 r = requests.get(url)
 html = r.content
 soup = BeautifulSoup(html)
-driver = webdriver.Chrome(executable_path='/Users/Julien/PycharmProjects/artistik_Rezo_alert/venv/bin/chromedriver')
+driver = webdriver.Chrome(executable_path='/Users/julienthillard/PycharmProjects/bin/chromedriver')
 driver.get(url)
 
 mailName = 'signin[username]'
@@ -35,7 +35,8 @@ driver.find_element_by_name(submitButtonClass).click()
 time.sleep(1. + random.random())
 
 urlBase = 'http://www.clubartistikrezo.com/evenements?page='
-result = list()
+newEvents = list()
+oldEvents = list()
 
 html = driver.execute_script("return document.documentElement.outerHTML;")
 soup2 = BeautifulSoup(html)
@@ -43,6 +44,8 @@ pages = soup2.find('div', {'class': 'pager'})
 if pages is not None:
     pagesRef = pages.find_all('a')
     pageTotal = 1 if len(pagesRef) == 0 else len(pagesRef) - 2
+
+now = datetime.datetime.now()
 
 for i in range(1, pageTotal):
 
@@ -86,10 +89,13 @@ for i in range(1, pageTotal):
 
                         eventInfo['description'] = descriptionText
 
-                    result.append(eventInfo)
+                    if eventInfo not in oldRecordsEvent:
+                        newEvents.append(eventInfo)
+                    eventInfo['updated'] = now
+                    oldRecords.insert_one(eventInfo)
 
+    resultDict = dict(updated=now)
+    if len(newEvents) > 0:
+        resultDict['newEvents']=newEvents
+        newRecords.insert_one(resultDict)
 
-    resultDict = dict(updated=datetime.datetime.now(), events=result)
-
-records.insert_one(resultDict)
-print(resultDict)
