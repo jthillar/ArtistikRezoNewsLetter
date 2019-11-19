@@ -1,17 +1,81 @@
 # -*- coding: utf-8 -*-
 
-import re
-import datetime, requests, os, time, random
+import datetime, requests, os, time, random, re, smtplib, ssl, pykeepass
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from pymongo import MongoClient
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-client = MongoClient("mongodb+srv://julien:bctB1iR4@data-collection-l1mqp.mongodb.net/test?retryWrites=true&w=majority")
+
+kp = pykeepass.PyKeePass('passwordARNL.kdbx', password=os.environ['PASSWORD'])
+password = kp.find_entries(title='MONGODB', first=True).password
+
+client = MongoClient("mongodb+srv://julien:"+password+"@data-collection-l1mqp.mongodb.net/test?retryWrites=true&w=majority")
 db = client.get_database('artistik_rezo')
 newRecords = db.days_records
 oldRecords = db.old_records
 
-oldRecordsEvent = list(oldRecords.find({}))
+def sendingEmails(newEvents):
+    # Sendding Email
+    emailFromInfo = kp.find_entries(title='emailAccount', first=True)
+    sender_email = emailFromInfo.username
+    password = emailFromInfo.password
+
+    # Try to log in to server and send email
+    try:
+        emailRecords = db.users
+        emailList = [x['email'] for x in emailRecords.find({})]
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "Les nouveaux évènements sur Artistik Rezo Club !"
+        message["From"] = sender_email
+        # Create secure connection with server and send email
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(sender_email, password)
+            for receiver_email in emailList:
+                message["To"] = receiver_email
+                # Create the plain-text and HTML version of your message
+                html = """\
+                <html>
+                  <body>
+                    <p>Bonjour, bonjour !<br>
+                    Voici les nouveaux évènements sur <a href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :</p>
+                """
+                totalEvent = 0
+                for event in newEvents:
+                    html += """<b style="font-family:arial;font-size:115%;">""" + event['title'] + """ - </b>"""
+                    html += """<i style="font-family:arial">"""+ event['date'] + """</i>"""
+                    html += """<p style="font-family:arial">""" + event['description']
+                    html += """ <a href=\""""+event["linkArtistikRezo"]+""""\">Plus d\'infos sur artistik rezo </a></p>"""
+                    totalEvent += 1
+                html += """
+                    <br><p style="font-family:arial">Voilà pour les nouveaux évènement du jour. 
+                    A demain si de nouveaux évènements arrivent !<br><br>
+                    Si vous ne voulez plus recevoir la newsletter, envoyer moi un mail en cliquant
+                    <a href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Atritik%20Rezo">ici</a>
+                  </body>
+                </html>
+                """
+
+                # Turn these into plain/html MIMEText objects
+                part1 = MIMEText(html, "html")
+
+                # Add HTML/plain-text parts to MIMEMultipart message
+                # The email client will try to render the last part first
+                message.attach(part1)
+                server.sendmail(sender_email, receiver_email, message.as_string())
+
+    except Exception as e:
+        # Print any error messages to stdout
+        print(e)
+
+oldEvents = list()
+oldRecordsVec = oldRecords.find({})
+for e in oldRecordsVec:
+    e.pop('updated', None)
+    e.pop('_id', None)
+    oldEvents.append(e)
 
 url = 'http://www.clubartistikrezo.com/'
 chromeExecutable = os.path.join(os.path.dirname(__file__))
@@ -36,7 +100,6 @@ time.sleep(1. + random.random())
 
 urlBase = 'http://www.clubartistikrezo.com/evenements?page='
 newEvents = list()
-oldEvents = list()
 
 html = driver.execute_script("return document.documentElement.outerHTML;")
 soup2 = BeautifulSoup(html)
@@ -53,7 +116,7 @@ for i in range(1, pageTotal):
 
     r = driver.get(url)
     html = driver.execute_script("return document.documentElement.outerHTML;")
-    soup = BeautifulSoup(html)
+    soup = BeautifulSoup(html, features='lxml')
 
     body = soup.find('div', {'class':'content'})
 
@@ -89,13 +152,21 @@ for i in range(1, pageTotal):
 
                         eventInfo['description'] = descriptionText
 
-                    if eventInfo not in oldRecordsEvent:
+                    if eventInfo not in oldEvents:
+                        eventInfo['updated'] = now
+                        oldRecords.insert_one(eventInfo)
+                        del eventInfo["_id"]
+                        del eventInfo["updated"]
                         newEvents.append(eventInfo)
-                    eventInfo['updated'] = now
-                    oldRecords.insert_one(eventInfo)
 
-    resultDict = dict(updated=now)
-    if len(newEvents) > 0:
-        resultDict['newEvents']=newEvents
-        newRecords.insert_one(resultDict)
+
+resultDict = dict(updated=now)
+if len(newEvents) > 0:
+    resultDict['newEvents']=newEvents
+    newRecords.insert_one(resultDict)
+    sendingEmails(newEvents)
+
+
+driver.close()
+
 
