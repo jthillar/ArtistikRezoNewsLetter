@@ -1,26 +1,19 @@
 # -*- coding: utf-8 -*-
 
-import datetime, requests, os, time, random, re, smtplib, ssl, pykeepass
+import datetime, requests, os, time, random, re, smtplib, ssl
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from pymongo import MongoClient
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import credentials
 
+cd = credentials.GetCredentials('passwordARNL.kdbx', os.environ['PASSWORD'])
 
-kp = pykeepass.PyKeePass('passwordARNL.kdbx', password=os.environ['PASSWORD'])
-password = kp.find_entries(title='MONGODB', first=True).password
-
-client = MongoClient("mongodb+srv://julien:"+password+"@data-collection-l1mqp.mongodb.net/test?retryWrites=true&w=majority")
-db = client.get_database('artistik_rezo')
-newRecords = db.days_records
-oldRecords = db.old_records
-
-def sendingEmails(newEvents):
+def sendingEmails(newEvents, db):
     # Sendding Email
-    emailFromInfo = kp.find_entries(title='emailAccount', first=True)
-    sender_email = emailFromInfo.username
-    password = emailFromInfo.password
+    sender_email = cd.emailUsername()
+    password = cd.emailPassword()
 
     # Try to log in to server and send email
     try:
@@ -39,8 +32,8 @@ def sendingEmails(newEvents):
                 html = """\
                 <html>
                   <body>
-                    <p>Bonjour, bonjour !<br>
-                    Voici les nouveaux évènements sur <a href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :</p>
+                    <p>Bonjour, bonjour !</p>
+                    <p>Voici les nouveaux évènements sur <a href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :</p>
                 """
                 totalEvent = 0
                 for event in newEvents:
@@ -52,7 +45,7 @@ def sendingEmails(newEvents):
                 html += """
                     <br><p style="font-family:arial">Voilà pour les nouveaux évènement du jour. 
                     A demain si de nouveaux évènements arrivent !<br><br>
-                    Si vous ne voulez plus recevoir la newsletter, envoyer moi un mail en cliquant
+                    Si vous ne voulez plus recevoir la newsletter, envoyez moi un mail en cliquant
                     <a href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Atritik%20Rezo">ici</a>
                   </body>
                 </html>
@@ -70,103 +63,116 @@ def sendingEmails(newEvents):
         # Print any error messages to stdout
         print(e)
 
-oldEvents = list()
-oldRecordsVec = oldRecords.find({})
-for e in oldRecordsVec:
-    e.pop('updated', None)
-    e.pop('_id', None)
-    oldEvents.append(e)
 
-url = 'http://www.clubartistikrezo.com/'
-chromeExecutable = os.path.join(os.path.dirname(__file__))
+def artistikRezoJob():
 
-r = requests.get(url)
-html = r.content
-soup = BeautifulSoup(html)
-driver = webdriver.Chrome(executable_path='/Users/julienthillard/PycharmProjects/bin/chromedriver')
-driver.get(url)
+    client = MongoClient("mongodb+srv://" + cd.mongoDbUsername() + ":" + cd.mongoDbPassword() + cd.mongoDbUrl())
+    db = client.get_database('artistik_rezo')
 
-mailName = 'signin[username]'
-driver.find_element_by_name(mailName).send_keys('jthillar@student.42.fr')
-time.sleep(1. + random.random())
+    newRecords = db.days_records
+    oldRecords = db.old_records
 
-passwordName = 'signin[password]'
-driver.find_element_by_name(passwordName).send_keys('julien')
-time.sleep(1. + random.random())
+    oldEvents = list()
+    oldRecordsVec = oldRecords.find({})
+    for e in oldRecordsVec:
+        e.pop('updated', None)
+        e.pop('_id', None)
+        oldEvents.append(e)
 
-submitButtonClass = 'connexion'
-driver.find_element_by_name(submitButtonClass).click()
-time.sleep(1. + random.random())
+    url = 'http://www.clubartistikrezo.com/'
 
-urlBase = 'http://www.clubartistikrezo.com/evenements?page='
-newEvents = list()
+    r = requests.get(url)
+    html = r.content
+    soup = BeautifulSoup(html)
+    driver = webdriver.Chrome(executable_path='/Users/julienthillard/PycharmProjects/bin/chromedriver')
+    try:
+        driver.get(url)
 
-html = driver.execute_script("return document.documentElement.outerHTML;")
-soup2 = BeautifulSoup(html)
-pages = soup2.find('div', {'class': 'pager'})
-if pages is not None:
-    pagesRef = pages.find_all('a')
-    pageTotal = 1 if len(pagesRef) == 0 else len(pagesRef) - 2
+        mailName = 'signin[username]'
+        driver.find_element_by_name(mailName).send_keys(cd.artistikRezoUsername())
+        time.sleep(1. + random.random())
 
-now = datetime.datetime.now()
+        passwordName = 'signin[password]'
+        driver.find_element_by_name(passwordName).send_keys(cd.artistikRezoPassword())
+        time.sleep(1. + random.random())
 
-for i in range(1, pageTotal):
+        submitButtonClass = 'connexion'
+        driver.find_element_by_name(submitButtonClass).click()
+        time.sleep(1. + random.random())
 
-    url = urlBase + str(i)
+        urlBase = 'http://www.clubartistikrezo.com/evenements?page='
+        newEvents = list()
 
-    r = driver.get(url)
-    html = driver.execute_script("return document.documentElement.outerHTML;")
-    soup = BeautifulSoup(html, features='lxml')
+        html = driver.execute_script("return document.documentElement.outerHTML;")
+        soup2 = BeautifulSoup(html)
+        pages = soup2.find('div', {'class': 'pager'})
+        if pages is not None:
+            pagesRef = pages.find_all('a')
+            pageTotal = 1 if len(pagesRef) == 0 else len(pagesRef) - 2
 
-    body = soup.find('div', {'class':'content'})
+        now = datetime.datetime.now()
 
-    if body is not None:
+        for i in range(1, pageTotal):
 
-        events = body.find_all('div', {'class': re.compile('^item clearfix')})
-        if events is not None:
-            for event in events:
-                eventInfo = dict()
-                title = event.find('h2')
-                date = event.find('div', {'class':'date'})
-                description = event.find('div', {'class':'desc'})
-                if title is not None and description is not None and date is not None:
-                    eventInfo['title'] = title.text
-                    eventInfo['date'] = date.text.strip()
-                    mapsTag = description.find('h3')
-                    if mapsTag is not None:
-                        mapsLink = mapsTag.find('a')
-                        if mapsLink is not None:
-                            eventInfo['mapsLink'] = mapsLink['href']
-                    desc = description.find_all('p')
-                    if len(desc) > 0:
-                        descriptionText = ""
-                        for p in desc:
-                            linkTemp = p.find('a')
-                            if linkTemp is not None:
-                                if 'artistikrezo' in linkTemp['href']:
-                                    eventInfo['linkArtistikRezo'] = linkTemp['href']
-                                else:
-                                    eventInfo['eventType'] = p.text.strip().split('.')[0]
-                            else:
-                                descriptionText += p.text.strip()
+            url = urlBase + str(i)
 
-                        eventInfo['description'] = descriptionText
+            r = driver.get(url)
+            html = driver.execute_script("return document.documentElement.outerHTML;")
+            soup = BeautifulSoup(html, features='lxml')
 
-                    if eventInfo not in oldEvents:
-                        eventInfo['updated'] = now
-                        oldRecords.insert_one(eventInfo)
-                        del eventInfo["_id"]
-                        del eventInfo["updated"]
-                        newEvents.append(eventInfo)
+            body = soup.find('div', {'class':'content'})
+
+            if body is not None:
+
+                events = body.find_all('div', {'class': re.compile('^item clearfix')})
+                if events is not None:
+                    for event in events:
+                        eventInfo = dict()
+                        title = event.find('h2')
+                        date = event.find('div', {'class':'date'})
+                        description = event.find('div', {'class':'desc'})
+                        if title is not None and description is not None and date is not None:
+                            eventInfo['title'] = title.text
+                            eventInfo['date'] = date.text.strip()
+                            mapsTag = description.find('h3')
+                            if mapsTag is not None:
+                                mapsLink = mapsTag.find('a')
+                                if mapsLink is not None:
+                                    eventInfo['mapsLink'] = mapsLink['href']
+                            desc = description.find_all('p')
+                            if len(desc) > 0:
+                                descriptionText = ""
+                                for p in desc:
+                                    linkTemp = p.find('a')
+                                    if linkTemp is not None:
+                                        if 'artistikrezo' in linkTemp['href']:
+                                            eventInfo['linkArtistikRezo'] = linkTemp['href']
+                                        else:
+                                            eventInfo['eventType'] = p.text.strip().split('.')[0]
+                                    else:
+                                        descriptionText += p.text.strip()
+
+                                eventInfo['description'] = descriptionText
+
+                            if eventInfo not in oldEvents:
+                                eventInfo['updated'] = now
+                                oldRecords.insert_one(eventInfo)
+                                del eventInfo["_id"]
+                                del eventInfo["updated"]
+                                newEvents.append(eventInfo)
+
+        resultDict = dict(updated=now)
+        if len(newEvents) > 0:
+            resultDict['newEvents']=newEvents
+            newRecords.insert_one(resultDict)
+            sendingEmails(newEvents, db)
+
+    except Exception as e:
+        print("Error when getting infos : {}".format(repr(e)))
+
+    finally:
+        driver.close()
 
 
-resultDict = dict(updated=now)
-if len(newEvents) > 0:
-    resultDict['newEvents']=newEvents
-    newRecords.insert_one(resultDict)
-    sendingEmails(newEvents)
-
-
-driver.close()
-
-
+if __name__ == "__main__":
+    artistikRezoJob()
