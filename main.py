@@ -28,6 +28,7 @@ def sendingEmails(newEvents, db):
             server.login(sender_email, password)
             for receiver_email in emailList:
                 message["To"] = receiver_email
+                print("-- Sending email to {}".format(receiver_email))
                 # Create the plain-text and HTML version of your message
                 html = """\
                 <html>
@@ -66,6 +67,7 @@ def sendingEmails(newEvents, db):
 
 def artistikRezoJob():
 
+    print('--> Connect to Mongo...')
     client = MongoClient("mongodb+srv://" + cd.mongoDbUsername() + ":" + cd.mongoDbPassword() + cd.mongoDbUrl())
     db = client.get_database('artistik_rezo')
 
@@ -81,10 +83,11 @@ def artistikRezoJob():
 
     url = 'http://www.clubartistikrezo.com/'
 
-    r = requests.get(url)
-    html = r.content
-    soup = BeautifulSoup(html)
-    driver = webdriver.Chrome(executable_path='/Users/julienthillard/PycharmProjects/bin/chromedriver')
+    print('--> Getting info from artistik rezo...')
+    #Set Up Driver
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.binary_location = os.environ['GOOGLE_CHROME_SHIM']
+    driver = webdriver.Chrome(chrome_options=chrome_options)
     try:
         driver.get(url)
 
@@ -163,15 +166,19 @@ def artistikRezoJob():
 
         resultDict = dict(updated=now)
         if len(newEvents) > 0:
+            print('--> Sending emails...')
             resultDict['newEvents']=newEvents
             newRecords.insert_one(resultDict)
             sendingEmails(newEvents, db)
+        else:
+            print('<- No New events.')
 
     except Exception as e:
         print("Error when getting infos : {}".format(repr(e)))
 
     finally:
         driver.close()
+        print('<-- Daily Job endend.')
 
 
 if __name__ == "__main__":
