@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import datetime, requests, os, time, random, re, smtplib, ssl
+import datetime, os, time, random, re, smtplib, ssl
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from pymongo import MongoClient
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import credentials
+import warnings
+warnings.filterwarnings("ignore")
 
 cd = credentials.GetCredentials('passwordARNL.kdbx', os.environ['PASSWORD'])
 
@@ -33,21 +35,41 @@ def sendingEmails(newEvents, db):
                 html = """\
                 <html>
                   <body>
-                    <p>Bonjour, bonjour !</p>
-                    <p>Voici les nouveaux évènements sur <a href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :</p>
+                    <div class="body" style="border: 3px solid #D10C09; border-radius: 12px; padding: 5%;margin:auto">
+                        <a  href="http://www.clubartistikrezo.com/">
+                            <img src="http://www.clubartistikrezo.com/images/logo.png" width="200" 
+                            style="margin-bottom:6%;margin-left: auto; margin-right: auto; display: block;">
+                        </a>
+                        <div style="font-family:arial;font-size:108%;margin-bottom:3%;">
+                            <p>Bonjour, </p>
+                            <p>Voici les nouveaux évènements sur 
+                                <a style="text-decoration : none; color : #D10C09; font-weight: bold;" 
+                                href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :
+                            </p>
+                        </div>
+                        
                 """
                 totalEvent = 0
                 for event in newEvents:
+                    html += """<div class="event" style="margin-bottom:4%;">"""
+                    html += """<div class="title" style="margin-bottom: 2%;">"""
                     html += """<b style="font-family:arial;font-size:115%;">""" + event['title'] + """ - </b>"""
                     html += """<i style="font-family:arial">"""+ event['date'] + """</i>"""
-                    html += """<p style="font-family:arial">""" + event['description']
-                    html += """ <a href=\""""+event["linkArtistikRezo"]+""""\">Plus d\'infos sur artistik rezo </a></p>"""
+                    html += """</div>"""
+                    html += """<div class="infos" style="display:flex;align-items:center;">"""
+                    html += """<img style="float: left;margin-right: 15px;" alt=\"""" + event['title'] + """\" src=\"""" + event['imgUrl'] + """\" width="60">"""
+                    html += """<p style="font-family:arial;text-align:justify;">""" + event['description'] + """ """
+                    html += """<a style="text-decoration : none; color : #D10C09; font-weight: bold;" href=\""""+event["linkArtistikRezo"] + """"\">Plus d\'infos sur Artistik Rezo.</a></p>"""
+                    html += """</div>"""
+                    html += """</div>"""
                     totalEvent += 1
                 html += """
-                    <br><p style="font-family:arial">Voilà pour les nouveaux évènements du jour. 
+                    <p style="font-family:arial">Voilà pour les nouveaux évènements du jour. 
                     A demain si de nouveaux évènements arrivent !<br><br>
                     Si vous ne voulez plus recevoir la newsletter, envoyez moi un mail en cliquant
-                    <a href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Atritik%20Rezo">ici</a>
+                    <a style="text-decoration : none; color : #D10C09; font-weight: bold;"
+                     href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Artistik%20Rezo">ici</a>
+                    </div>
                   </body>
                 </html>
                 """
@@ -85,11 +107,15 @@ def artistikRezoJob():
 
     print('--> Getting info from artistik rezo...')
     #Set Up Driver
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('window-size=1920x1080')
-    chrome_options.binary_location = os.environ['GOOGLE_CHROME_SHIM']
-    driver = webdriver.Chrome(options=chrome_options)
+    try:
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('window-size=1920x1080')
+        chrome_options.binary_location = os.environ['GOOGLE_CHROME_SHIM']
+        driver = webdriver.Chrome(options=chrome_options)
+    except:
+        driver = webdriver.Chrome(executable_path=cd.chromeDriverExecutablePath())
+
     try:
         driver.get(url)
 
@@ -107,7 +133,6 @@ def artistikRezoJob():
 
         urlBase = 'http://www.clubartistikrezo.com/evenements?page='
         newEvents = list()
-
         html = driver.execute_script("return document.documentElement.outerHTML;")
         soup2 = BeautifulSoup(html)
         pages = soup2.find('div', {'class': 'pager'})
@@ -120,8 +145,8 @@ def artistikRezoJob():
         for i in range(1, pageTotal):
 
             url = urlBase + str(i)
+            driver.get(url)
 
-            r = driver.get(url)
             html = driver.execute_script("return document.documentElement.outerHTML;")
             soup = BeautifulSoup(html, features='lxml')
 
@@ -134,6 +159,9 @@ def artistikRezoJob():
                     for event in events:
                         eventInfo = dict()
                         title = event.find('h2')
+                        image = event.find('img')
+                        if image is not None:
+                            eventInfo['imgUrl'] = 'http://www.clubartistikrezo.com' + image['src']
                         date = event.find('div', {'class':'date'})
                         description = event.find('div', {'class':'desc'})
                         if title is not None and description is not None and date is not None:

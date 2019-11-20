@@ -28,3 +28,6 @@ class GetCredentials:
 
     def emailPassword(self):
         return self.kp.find_entries(title='emailAccount', first=True).password
+
+    def chromeDriverExecutablePath(self):
+        return self.kp.find_entries(title='Chrome_executable_path', first=True).url
