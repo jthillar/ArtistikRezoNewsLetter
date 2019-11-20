@@ -44,7 +44,7 @@ def sendingEmails(newEvents, db):
                     html += """ <a href=\""""+event["linkArtistikRezo"]+""""\">Plus d\'infos sur artistik rezo </a></p>"""
                     totalEvent += 1
                 html += """
-                    <br><p style="font-family:arial">Voilà pour les nouveaux évènement du jour. 
+                    <br><p style="font-family:arial">Voilà pour les nouveaux évènements du jour. 
                     A demain si de nouveaux évènements arrivent !<br><br>
                     Si vous ne voulez plus recevoir la newsletter, envoyez moi un mail en cliquant
                     <a href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Atritik%20Rezo">ici</a>
