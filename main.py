@@ -87,7 +87,7 @@ def artistikRezoJob():
     #Set Up Driver
     chrome_options = webdriver.ChromeOptions()
     chrome_options.binary_location = os.environ['GOOGLE_CHROME_SHIM']
-    driver = webdriver.Chrome(chrome_options=chrome_options)
+    driver = webdriver.Chrome(options=chrome_options)
     try:
         driver.get(url)
 
