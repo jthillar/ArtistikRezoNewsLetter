@@ -28,58 +28,60 @@ def sendingEmails(newEvents, db):
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
             server.login(sender_email, password)
-            for receiver_email in emailList:
-                message["To"] = receiver_email
-                print("-- Sending email to {}".format(receiver_email))
-                # Create the plain-text and HTML version of your message
-                html = """\
-                <html>
-                  <body>
-                    <div class="body" style="border: 3px solid #D10C09; border-radius: 12px; padding: 5%;margin:auto">
-                        <a  href="http://www.clubartistikrezo.com/">
-                            <img src="http://www.clubartistikrezo.com/images/logo.png" width="200" 
-                            style="margin-bottom:6%;margin-left: auto; margin-right: auto; display: block;">
-                        </a>
-                        <div style="font-family:arial;font-size:108%;margin-bottom:3%;">
-                            <p>Bonjour, </p>
-                            <p>Voici les nouveaux évènements sur 
-                                <a style="text-decoration : none; color : #D10C09; font-weight: bold;" 
-                                href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :
-                            </p>
-                        </div>
-                        
-                """
-                totalEvent = 0
-                for event in newEvents:
-                    html += """<div class="event" style="margin-bottom:4%;">"""
-                    html += """<div class="title" style="margin-bottom: 2%;">"""
-                    html += """<b style="font-family:arial;font-size:115%;">""" + event['title'] + """ - </b>"""
-                    html += """<i style="font-family:arial">"""+ event['date'] + """</i>"""
-                    html += """</div>"""
-                    html += """<div class="infos" style="display:flex;align-items:center;">"""
-                    html += """<img style="float: left;margin-right: 15px;" alt=\"""" + event['title'] + """\" src=\"""" + event['imgUrl'] + """\" width="60">"""
-                    html += """<p style="font-family:arial;text-align:justify;">""" + event['description'] + """ """
-                    html += """<a style="text-decoration : none; color : #D10C09; font-weight: bold;" href=\""""+event["linkArtistikRezo"] + """"\">Plus d\'infos sur Artistik Rezo.</a></p>"""
-                    html += """</div>"""
-                    html += """</div>"""
-                    totalEvent += 1
-                html += """
-                    <p style="font-family:arial">Voilà pour les nouveaux évènements du jour. 
-                    A demain si de nouveaux évènements arrivent !<br><br>
-                    Si vous ne voulez plus recevoir la newsletter, envoyez moi un mail en cliquant
-                    <a style="text-decoration : none; color : #D10C09; font-weight: bold;"
-                     href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Artistik%20Rezo">ici</a>
+            # Create the plain-text and HTML version of your message
+            html = """\
+            <html>
+              <body>
+                <div class="body" style="border: 3px solid #D10C09; border-radius: 12px; padding: 5%;margin:auto">
+                    <a  href="http://www.clubartistikrezo.com/">
+                        <img src="http://www.clubartistikrezo.com/images/logo.png" width="200" 
+                        style="margin-bottom:6%;margin-left: auto; margin-right: auto; display: block;">
+                    </a>
+                    <div style="font-family:arial;font-size:108%;margin-bottom:3%;">
+                        <p>Bonjour, </p>
+                        <p>Voici les nouveaux évènements sur 
+                            <a style="text-decoration : none; color : #D10C09; font-weight: bold;" 
+                            href="http://www.clubartistikrezo.com/mon-compte"> Artistik Rezo Club</a> :
+                        </p>
                     </div>
-                  </body>
-                </html>
-                """
+                    
+            """
+            totalEvent = 0
+            for event in newEvents:
+                html += """<div class="event" style="margin-bottom:4%;">"""
+                html += """<div class="title" style="margin-bottom: 2%;">"""
+                html += """<b style="font-family:arial;font-size:115%;">""" + event['title'] + """ - </b>"""
+                html += """<i style="font-family:arial">"""+ event['date'] + """</i>"""
+                html += """</div>"""
+                html += """<div class="infos" style="display:flex;align-items:center;">"""
+                html += """<img style="float: left;margin-right: 15px;" alt=\"""" + event['title'] + """\" src=\"""" + event['imgUrl'] + """\" width="60">"""
+                html += """<p style="font-family:arial;text-align:justify;">""" + event['description'] + """ """
+                html += """<a style="text-decoration : none; color : #D10C09; font-weight: bold;" href=\""""+event["linkArtistikRezo"] + """"\">Plus d\'infos sur Artistik Rezo.</a></p>"""
+                html += """</div>"""
+                html += """</div>"""
+                totalEvent += 1
+            html += """
+                <p style="font-family:arial">Voilà pour les nouveaux évènements du jour. 
+                A demain si de nouveaux évènements arrivent !<br><br>
+                Si vous ne voulez plus recevoir la newsletter, envoyez moi un mail en cliquant
+                <a style="text-decoration : none; color : #D10C09; font-weight: bold;"
+                 href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Artistik%20Rezo">ici</a>
+                </div>
+              </body>
+            </html>
+            """
 
-                # Turn these into plain/html MIMEText objects
-                part1 = MIMEText(html, "html")
+            # Turn these into plain/html MIMEText objects
+            part1 = MIMEText(html, "html")
 
-                # Add HTML/plain-text parts to MIMEMultipart message
-                # The email client will try to render the last part first
-                message.attach(part1)
+            # Add HTML/plain-text parts to MIMEMultipart message
+            # The email client will try to render the last part first
+            message.attach(part1)
+            for receiver_email in emailList:
+                print("-- Sending email to {}".format(receiver_email))
+                if "To" in message:
+                    del message["To"]
+                message["To"] = receiver_email
                 server.sendmail(sender_email, receiver_email, message.as_string())
 
     except Exception as e:
