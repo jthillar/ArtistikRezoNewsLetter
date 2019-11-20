@@ -86,6 +86,8 @@ def artistikRezoJob():
     print('--> Getting info from artistik rezo...')
     #Set Up Driver
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('window-size=1920x1080')
     chrome_options.binary_location = os.environ['GOOGLE_CHROME_SHIM']
     driver = webdriver.Chrome(options=chrome_options)
     try:
