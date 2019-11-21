@@ -51,12 +51,15 @@ def sendingEmails(newEvents, db):
                 html += """<div class="event" style="margin-bottom:4%;">"""
                 html += """<div class="title" style="margin-bottom: 2%;">"""
                 html += """<b style="font-family:arial;font-size:115%;">""" + event['title'] + """ - </b>"""
-                html += """<i style="font-family:arial">"""+ event['date'] + """</i>"""
+                if 'date' in event:
+                    html += """<i style="font-family:arial">""" + event['date'] + """</i>"""
                 html += """</div>"""
                 html += """<div class="infos" style="display:flex;align-items:center;">"""
-                html += """<img style="float: left;margin-right: 15px;" alt=\"""" + event['title'] + """\" src=\"""" + event['imgUrl'] + """\" width="60">"""
+                if 'imgUrl' in event:
+                    html += """<img style="float: left;margin-right: 15px;" alt=\"""" + event['title'] + """\" src=\"""" + event['imgUrl'] + """\" width="60">"""
                 html += """<p style="font-family:arial;text-align:justify;">""" + event['description'] + """ """
-                html += """<a style="text-decoration : none; color : #D10C09; font-weight: bold;" href=\""""+event["linkArtistikRezo"] + """"\">Plus d\'infos sur Artistik Rezo.</a></p>"""
+                if 'linkArtistikRezo' in event:
+                    html += """<a style="text-decoration : none; color : #D10C09; font-weight: bold;" href=\""""+event["linkArtistikRezo"] + """"\">Plus d\'infos sur Artistik Rezo.</a></p>"""
                 html += """</div>"""
                 html += """</div>"""
                 totalEvent += 1
@@ -86,7 +89,7 @@ def sendingEmails(newEvents, db):
 
     except Exception as e:
         # Print any error messages to stdout
-        print(e)
+        print("Error when writing email : {}".format(repr(e)))
 
 
 def artistikRezoJob():
