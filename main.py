@@ -68,9 +68,9 @@ def sendingEmails(newEvents, db):
             html += """
                 <p style="font-family:arial">Voilà pour les nouveaux évènements du jour. 
                 A demain si de nouveaux évènements arrivent !<br><br>
-                Si vous ne voulez plus recevoir la newsletter, envoyez moi un mail en cliquant
+                Si vous ne voulez plus recevoir la newsletter, vous pouvez 
                 <a style="text-decoration : none; color : #D10C09; font-weight: bold;"
-                 href="mailto:jthillar@student.42.fr?subject=Désabonnement%20Newsletter%20Artistik%20Rezo">ici</a>
+                 href="https://artistikrezoclub-newsletter.herokuapp.com/unregister/">vous désinscrire ici.</a>
                 </div>
               </body>
             </html>

@@ -27,7 +27,7 @@ def register():
 
 @app.route('/unregister/', methods=['POST', 'GET'])
 def unregister():
-    description = """Pour vous désabonner, veuillez remplir le champs suivant avec votre adresse e-mail"""
+    description = """Pour vous désabonner, veuillez remplir le champ suivant avec votre adresse e-mail"""
     if request.method == 'POST':
         users = db.users
         existing_user = users.find_one({'email': request.form['email']})
@@ -36,7 +36,7 @@ def unregister():
             description = """Vous ne recevrez plus la newsletter."""
             return render_template('registered.html', description=description)
 
-        description = "Cette adresse email ne reçois pas la newsletter."
+        description = "Cette adresse email nous est inconnue."
         return render_template('registered.html', description=description)
 
     return render_template('unregister.html', description=description)
