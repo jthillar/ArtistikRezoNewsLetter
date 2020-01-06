@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card" style="font-family:arial;font-size:120%;margin-bottom:3%;">
+    <p style="text-align: center;">
+        {{ description }}
+    </p>
+</div>
+<p  style="margin-bottom:10%">
+    <form method=POST action="{{ url_for('unregister') }}">
+        <input type="email" name="email" size="35" style="border: 2px solid #D10C09; font-size:100%">
+        <button type="submit" class="btn btn-primary btn-block"> OK </button>
+    </form>
+</p>
+{% endblock %}

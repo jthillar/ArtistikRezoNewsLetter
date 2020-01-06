@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import datetime, os, time, random, re, smtplib, ssl
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from pymongo import MongoClient
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import credentials
 import warnings
-warnings.filterwarnings("ignore")
 
-cd = credentials.GetCredentials('passwordARNL.kdbx', os.environ['PASSWORD'])
+from pymongo import MongoClient
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+from config import cd
+
+warnings.filterwarnings("ignore")
 
 def sendingEmails(newEvents, db):
     # Sendding Email
