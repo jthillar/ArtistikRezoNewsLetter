@@ -10,7 +10,7 @@ from selenium import webdriver
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from config import cd
+cd = credentials.GetCredentials('passwordARNL.kdbx', os.environ['PASSWORD'])
 
 warnings.filterwarnings("ignore")
 
