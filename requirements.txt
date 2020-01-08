@@ -23,7 +23,6 @@ MarkupSafe==1.1.1
 MongoAlchemy==0.19
 prettytable==0.7.2
 pycparser==2.19
-pycryptodome==3.9.4
 pykeepass==3.1.2
 pymongo==3.9.0
 pyOpenSSL==19.0.0
