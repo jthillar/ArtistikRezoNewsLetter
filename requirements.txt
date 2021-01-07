@@ -17,7 +17,7 @@ idna==2.8
 itsdangerous==1.1.0
 Jinja2==2.10.3
 keepassx==0.1.0
-lxml==4.4.1
+lxml==4.6.2
 MarkupSafe==1.1.1
 MongoAlchemy==0.19
 prettytable==0.7.2
